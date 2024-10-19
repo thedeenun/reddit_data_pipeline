@@ -1,2 +1,4 @@
 # reddit_data_pipeline
-This is my practice project to understand Basic Data Engineer
+Reddit API extraction data pipeline project
+This project for understanding basic Data engineer process
+inspired by https://github.com/ABZ-Aaron/Reddit-API-Pipeline 
