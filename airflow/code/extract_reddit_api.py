@@ -5,14 +5,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+OUTPUT_FILENAME = "extract_reddit_data"
+SUBREDDIT = os.getenv("SUBREDDIT")
 
-def main():
-    headers = connect_reddit_auth()
-    raw_data = extract_data(headers=headers)
-    transform_data(raw_data)
-
-
-def connect_reddit_auth():
+def extract_reddit_data():
     auth = requests.auth.HTTPBasicAuth(os.getenv("CLIENT_ID"), os.getenv("SECRET_KEY"))
     data = {
         "grant_type": "password",
@@ -27,23 +23,18 @@ def connect_reddit_auth():
         "https://www.reddit.com/api/v1/access_token",
         auth=auth,
         data=data,
-        headers={"User-Agent": "MyBot/0.0.1"},
+        headers=headers,
     )
     TOKEN = res.json()["access_token"]
 
     # add authorization to our headers dictionary
     headers = {**headers, **{"Authorization": f"bearer {TOKEN}"}}
 
-    return headers
+    extract_data = requests.get(f"https://oauth.reddit.com/r/{SUBREDDIT}/hot", headers=headers).json()
+    return extract_data
 
 
-def extract_data(headers):
-    keyword = "Garmin"
-    res = requests.get(f"https://oauth.reddit.com/r/{keyword}/hot", headers=headers)
-    return res.json
-
-
-def transform_data(data):
+def transform_reddit_data(extract_data):
     POST_FIELDS = (
         "id",
         "title",
@@ -61,7 +52,7 @@ def transform_data(data):
     )
 
     df = pd.DataFrame()  # Initialize an empty DataFrame
-    for post in data.json()["data"]["children"]:
+    for post in extract_data["data"]["children"]:
         df_temp = pd.DataFrame(
             {field: [post["data"][field]] for field in POST_FIELDS}
         )  # Build a single-row DataFrame
@@ -69,8 +60,4 @@ def transform_data(data):
             [df, df_temp], ignore_index=True
         )  # Concatenate with the main DataFrame
 
-    return df
-
-
-if __name__ == "__main__":
-    main()
+    df.to_csv(f"./data/{OUTPUT_FILENAME}.csv", index=False)
